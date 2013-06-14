@@ -1,0 +1,508 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.beginningee6.book</groupId>
+	<artifactId>beginningee6-chapter10-jpa</artifactId>
+	<version>0.0.7-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>beginningee6-chapter10-jpa</name>
+	<url>http://maven.apache.org</url>
+	
+	<organization>
+		<name>Primagest, Inc.</name>
+		<url>http://www.primagest.co.jp/</url>
+	</organization>
+	<!-- 
+		maven-release-pluginによりSubversion上にリリースするバージョンのタグを切るようにする
+		ための設定。
+	 -->
+	<scm>
+		<!-- 
+			バージョン用のタグが作成される元となるレポジトリへのパス。
+			ここでは、ブランチからタグを切らず、トランクから直接タグを
+			切ることを意味している。
+		 -->
+		<connection>
+			scm:svn:http://192.168.41.37/svn/beginningee6-chapter10/trunk/beginningee6-chapter10-jpa
+		</connection>
+		<!-- 
+			開発の本流（トランク）として機能するレポジトリへのパス。
+		 -->
+		<developerConnection>
+			scm:svn:http://192.168.41.37/svn/beginningee6-chapter10/trunk/beginningee6-chapter10-jpa
+		</developerConnection>
+	</scm>
+
+	<!-- 
+		成果物（パッケージ）を登録するArtifactoryレポジトリへの接続情報。
+		
+		POMのバージョンが「-SNAPSHOT」付きの場合は、snapshotRepositoryタグの情報に基づいて
+		登録が行われる。
+
+		POMのバージョンが「-SNAPSHOT」無しの場合は、repositoryタグの情報に基づいて
+		登録が行われる。
+	 -->
+	<distributionManagement>
+		<repository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>ipm.artifactory.server</id>
+			<name>Commons apps release repository</name>
+			<url>http://192.168.41.37/artifactory/common-apps-release/</url>
+			<layout>default</layout>
+		</repository>
+		<snapshotRepository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>ipm.artifactory.server</id>
+			<name>Commons apps snapshot repository</name>
+			<url>http://192.168.41.37/artifactory/common-apps-snapshot/</url>
+			<layout>default</layout>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<profiles>
+		<!--
+			開発端末上でのテストを想定したプロファイル。
+			インテグレーション・テストは、開発端末にインストールした
+			JBossASとDerbyを対象として実行されるようになっている。
+			
+			なお、このプロファイルをデフォルトとしている。
+		 -->
+		<profile>
+			<id>test-dev</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<!-- 
+					開発端末上のJBossAS/Derbyを前提とした
+					arquillian.xml,jbossas-ds.xml,persistence.xmlを配置
+				 -->
+				<testResources>
+					<testResource>
+						<directory>src/test/test-dev-resources</directory>
+					</testResource>
+				</testResources>
+			</build>
+			<!-- 開発端末上のJBossASはArquillianによって起動・終了されるようにしている -->
+			<dependencies>
+				<dependency>
+					<groupId>org.jboss.as</groupId>
+					<artifactId>jboss-as-arquillian-container-managed</artifactId>
+					<version>7.1.1.Final</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		<!--
+			CIサーバ（Jenkins）上でのテストを想定したプロファイル。
+			インテグレーション・テストは、75サーバであらかじめ起動済みのJBossASと
+			76サーバのMySQLを対象として実行されるようになっている。
+		 -->
+		<profile>
+			<id>test-ci</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<build>
+				<!-- 
+					75・76サーバ上のJBossAS/MySQLを前提とした
+					arquillian.xml,jbossas-ds.xml,persistence.xmlを配置
+				 -->
+				<testResources>
+					<testResource>
+						<directory>src/test/test-ci-resources</directory>
+					</testResource>
+				</testResources>
+			</build>
+			<!-- 
+				75サーバ上ですでに起動しているJBossASへArquillianがテストを実行するように
+				している
+			-->
+			<dependencies>
+				<dependency>
+					<groupId>org.jboss.as</groupId>
+					<artifactId>jboss-as-arquillian-container-remote</artifactId>
+					<version>7.1.1.Final</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
+	<reporting>
+		<plugins>
+			<!-- 
+				Javadocを生成するプラグイン。
+				
+				mvn javadoc:javadocによってJavadocを生成し、
+				Jenkinsジョブのビルド後の処理では、
+				target/site/apidocsフォルダを参照するように設定
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.9</version>
+			</plugin>
+			<!-- 
+				コードスタイルをチェックするプラグイン。
+				
+				mvn checkstyle:checkstyleによりチェックを実行し、
+				Jenkinsジョブのビルド後の処理では、
+				target/checkstyle-result.xmlを参照するように設定
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>2.9.1</version>
+				<configuration>
+					<configLocation>src/test/resources/sun_checks.xml</configLocation>
+				</configuration>
+			</plugin>
+			<!-- 
+				Checkstyleプラグインの実行に必要となる
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jxr-plugin</artifactId>
+				<version>2.3</version>
+			</plugin>
+			<!-- 
+				潜在的なバグの有無をチェックするプラグイン。
+				
+				mvn findbugs:findbugsによりチェックを実行し、
+				Jenkinsジョブのビルド後の処理では、
+				target/findbugsXml.xmlを参照するように設定
+			 -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>2.5.2</version>
+			</plugin>
+			<!-- 
+				ソースコードの行数、クラス数、メソッド数などを
+				カウントするプラグイン。
+				
+				mvn javancss:reportによりカウントを実行し、
+				Jenkinsジョブのビルド後の処理では、
+				**/target/javancss-raw-report.xmlを参照するように設定
+			 -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>javancss-maven-plugin</artifactId>
+				<version>2.0</version>
+			</plugin>
+			<!-- 
+				未使用のコード、最適化されていないコード、コードの大きさ、
+				複雑さ、コピーペーストにより複製されているコードなどを
+				検出するプラグイン。
+				
+				maven pmd:pmd pmd:cpdによりチェックを実行し、
+				Jenkinsジョブのビルド後の処理では、
+				**/pmd.xmlを参照するように設定
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.0.1</version>
+				<configuration>
+					<targetJdk>1.6</targetJdk>
+					<aggregate>true</aggregate>
+					<format>xml</format>
+					<rulesets>
+						<ruleset>/pmd-rules.xml</ruleset>
+					</rulesets>
+					<minimumTokens>50</minimumTokens>
+					<ignoreIdentifiers>true</ignoreIdentifiers>
+				</configuration>
+			</plugin>
+		</plugins>
+	</reporting>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.jboss.arquillian</groupId>
+				<artifactId>arquillian-bom</artifactId>
+				<version>1.0.3.Final</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		
+		<!-- 
+			mvn sonar:sonarにより収集されれるコードメトリクスを格納する
+			データベースサーバへの接続情報
+		 -->
+		<sonar.jdbc.url>
+			jdbc:mysql://192.168.41.76:3306/sonar?useUnicode=true&amp;characterEncoding=utf8
+		</sonar.jdbc.url>
+		<sonar.jdbc.driver>com.mysql.jdbc.Driver</sonar.jdbc.driver>
+		<sonar.jdbc.username>ipp</sonar.jdbc.username>
+		<sonar.jdbc.password>Passw0rd1</sonar.jdbc.password>
+		<sonar.host.url>
+			http://192.168.41.37/sonar
+		</sonar.host.url>
+		
+		<!-- 
+			Sonarでコードカバレッジを想定するプラグインとしてJaCoCoを明示的に指定
+		 -->
+		<sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
+		<!-- 
+			デフォルトでは、mvn sonar:sonarを実行すると再度mvn test/integration-test
+			相当のテストを再実行して、コードカバレッジの分析結果ファイル（*.exec）を
+			出力しようとする。
+			
+			このmvn sonar:sonar実行により起動されるJaCoCoエージェントプログラムの
+			バージョンは、Arquillianによるコンテナ内テストのコードカバレッジ測定で
+			サポートされるバージョンとは異なるため、mvn sonar:sonarによる再度の
+			テスト実行を抑制し、mvn test/integration-testで出力される分析結果ファイルを
+			そのまま読み込むように設定している
+		 -->
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+		
+		<!-- 
+			コードカバレッジの分析結果ファイルの配置フォルダ 
+			
+			JenkinsジョブのJaCoCoプラグインの設定では、
+			分析結果ファイル（*.exec）のパスを
+			**/target/coverage-reports/*.exec
+			のように設定し、ユニットテストとインテグレーションテストの両方の
+			コードカバレッジが合計されたものが集計されるようにすること。
+		-->
+		<coverage.reports.dir>${basedir}/target/coverage-reports</coverage.reports.dir>
+
+		<!-- 
+			ユニットテスト（mvn test）実行時のコードカバレッジ分析結果を
+			格納するファイル名 
+		-->
+		<sonar.jacoco.reportPath>${coverage.reports.dir}/jacoco-unit.exec</sonar.jacoco.reportPath>
+		<!-- 
+			インテグレーションテスト（mvn integration-test）実行時の
+			コードカバレッジ分析結果を格納するファイル名 
+		-->
+		<sonar.jacoco.itReportPath>${coverage.reports.dir}/jacoco-it.exec</sonar.jacoco.itReportPath>
+		<!-- 
+			mvn test/integration-testで起動するJaCoCoエージェントプログラムを
+			配置した場所を指定する。
+			
+			Arquillianがサポートするバージョン：0.6.0.201210061924のものを
+			ダウンロードしておくこと。
+		 -->
+		<sonar.jacoco.jar>${basedir}/jacoco/jacocoagent.jar</sonar.jacoco.jar>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.0</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+			<!-- 
+				ユニットテスト（mvn test）の設定
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.13</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.surefire</groupId>
+						<artifactId>surefire-junit47</artifactId>
+						<version>2.13</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<!-- 
+						＠Category（UnitTest.class）が付与された
+						テストクラスのみを実行する
+					-->
+					<groups>org.beginningee6.book.jpa.util.UnitTest</groups>
+					<excludeGroups>org.beginningee6.book.jpa.util.IntegrationTest</excludeGroups>
+					<!-- 
+						JaCoCoによるコードカバレッジ測定のためのエージェント起動設定
+					 -->
+					<argLine>-javaagent:${sonar.jacoco.jar}=destfile=${sonar.jacoco.reportPath}</argLine>
+				</configuration>
+			</plugin>
+
+			<!-- 
+				インテグレーションテスト（mvn integration-test）の設定
+				
+				mvn test -> mvn package -> mvn integration-test -> mvn verify
+				のようにフェーズが進んでいく。
+				
+				Jenkinsでは、mvn clean verify -Ptest-ciとして設定している。
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.13</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.surefire</groupId>
+						<artifactId>surefire-junit47</artifactId>
+						<version>2.13</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<!-- 
+						＠Category（IntegrationTest.class）が付与された
+						テストクラスのみを実行する
+					-->
+					<groups>org.beginningee6.book.jpa.util.IntegrationTest</groups>
+					<!-- 
+						コードカバレッジについては、ユニットテストとインテグレーションテストで
+						その結果を分離するが、テスト結果の集計については、1つにまとめる。
+					 -->
+					<reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<!-- 
+							JaCoCoによるコードカバレッジ測定のためのエージェント起動設定
+						 -->
+						<configuration>
+							<argLine>-javaagent:${sonar.jacoco.jar}=destfile=${sonar.jacoco.itReportPath}</argLine>
+							<includes>
+								<include>**/*.java</include>
+							</includes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- 
+				パッケージされるJARファイルに含まれるMANIFEST.MFに
+				リビジョン、ビルドの番号を埋め込むようにする
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+						</manifest>
+						<manifestEntries>
+							<!-- 
+								Implementation-Versionには、Subversionのリビジョン番号と
+								Jenkinsでのジョブ名・ビルド番号を埋め込む
+							 -->
+							<Implementation-Version>subversion-${env.SVN_REVISION}, ${env.BUILD_TAG}</Implementation-Version>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+			<!-- 
+				作成したパッケージのリリースを行うプラグイン。
+				
+				１．まず、mvn release:prepare -Ptest-ciを実行する。
+				
+				（１）現在のプロジェクトファイルがSubversionレポジトリの内容と一致している
+				　　　ことが確認される。
+				（２）次に、mvn clean verify -Ptest-ciが内部的に実行され、リリースしても
+				　　　問題ないかどうかの検証が行われる。
+				（３）次に、Subversionで、バージョン番号のタグが切られる。
+				　　　⇒この時、タグにあるPOMのバージョンからは「-SNAPSHOT」が
+				　　　　取り去られている。
+				（４）次に、POMのバージョンが0.0.1-SNAPSHOTから0.0.2-SNAPSHOTに更新され、
+				　　　かつ、Subversionへのコミットが行われる。
+				　　　⇒SubversionをポーリングしているJenkinsのジョブでは、この時の
+				　　　　コミットメッセージ「\[[maven-release-plugin\] prepare.*」を
+				　　　　トリガにしてビルドが走らないように設定する必要がある。
+
+				２．次に、mvn release:perform -Ptest-ciを実行する。
+				
+				（１）１．（３）で切られたタグからソースコードがチェックアウトされる。
+				（２）チェックアウトされたコードに対して、mvn clean verify -Ptest-ciが
+				　　　内部的に実行される。（デプロイ前の再検証の位置付け）
+				（３）次に、Artifactoryへ生成されたパッケージが登録される。
+				　　　⇒１．（３）の説明により、Artifactoryは、スナップショットでない
+				　　　　レポジトリに登録される。
+			 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.4.1</version>
+				<configuration>
+					<!-- 
+						Subversionレポジトリへタグを切る
+						Subversionユーザのアカウント情報
+					 -->
+					<username>sashida</username>
+					<password>Passw0rd1</password>
+				</configuration>
+			</plugin>
+		</plugins>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+		</testResources>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.arquillian.junit</groupId>
+			<artifactId>arquillian-junit-container</artifactId>
+			<version>1.0.3.Final</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.arquillian.protocol</groupId>
+			<artifactId>arquillian-protocol-servlet</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.spec</groupId>
+			<artifactId>jboss-javaee-6.0</artifactId>
+			<version>1.0.0.Final</version>
+			<type>pom</type>
+			<scope>provided</scope>
+		</dependency>
+		<!-- 
+			JaCoCoによるコードカバレッジの測定を、Arquillianによって
+			実行されるインコンテナテストでも実行するために必要となる
+			ライブラリ。
+		 -->
+		<dependency>
+			<groupId>org.jboss.arquillian.extension</groupId>
+			<artifactId>arquillian-jacoco</artifactId>
+			<version>1.0.0.Alpha5</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- 
+			arquillian-jacocoが必要となるライブラリ。
+			
+			1.0.0.Alpha5で指定されたバージョンを明示的に指定すること。
+		 -->
+		<dependency>
+			<groupId>org.jacoco</groupId>
+			<artifactId>org.jacoco.core</artifactId>
+			<version>0.6.0.201210061924</version>
+			<type>jar</type>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>
